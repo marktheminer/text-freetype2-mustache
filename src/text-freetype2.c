@@ -23,20 +23,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "text-freetype2.h"
 #include "obs-convenience.h"
 #include "find-font.h"
+#include "update-text.h"
 
 FT_Library ft2_lib;
-
-OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE("text-freetype2", "en-US")
-MODULE_EXPORT const char *obs_module_description(void)
-{
-	return "FreeType2 text source";
-}
 
 uint32_t texbuf_w = 2048, texbuf_h = 2048;
 
 static struct obs_source_info freetype2_source_info_v1 = {
-	.id = "text_ft2_source",
+	.id = "text_ft2_source_mustache",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CAP_OBSOLETE |
 			OBS_SOURCE_CUSTOM_DRAW,
@@ -54,7 +48,7 @@ static struct obs_source_info freetype2_source_info_v1 = {
 };
 
 static struct obs_source_info freetype2_source_info_v2 = {
-	.id = "text_ft2_source",
+	.id = "text_ft2_source_mustache",
 	.version = 2,
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_VIDEO |
@@ -96,7 +90,7 @@ static void init_plugin(void)
 	plugin_initialized = true;
 }
 
-bool obs_module_load()
+bool InitOBSTextFreetype2()
 {
 	char *config_dir = obs_module_config_path(NULL);
 	if (config_dir) {
@@ -110,7 +104,7 @@ bool obs_module_load()
 	return true;
 }
 
-void obs_module_unload(void)
+void FreeOBSTextFreetype2(void)
 {
 	if (plugin_initialized) {
 		free_os_font_list();
@@ -238,6 +232,8 @@ static void ft2_source_destroy(void *data)
 		bfree(srcdata->font_style);
 	if (srcdata->text != NULL)
 		bfree(srcdata->text);
+	if (srcdata->text_to_render != NULL)
+		bfree(srcdata->text_to_render);
 	if (srcdata->texbuf != NULL)
 		bfree(srcdata->texbuf);
 	if (srcdata->colorbuf != NULL)
@@ -283,7 +279,7 @@ static void ft2_source_render(void *data, gs_effect_t *effect)
 		draw_drop_shadow(srcdata);
 
 	draw_uv_vbuffer(srcdata->vbuf, srcdata->tex, srcdata->draw_effect,
-			(uint32_t)wcslen(srcdata->text) * 6);
+			(uint32_t)wcslen(srcdata->text_to_render) * 6);
 
 	UNUSED_PARAMETER(effect);
 }
@@ -306,7 +302,8 @@ static void ft2_video_tick(void *data, float seconds)
 			else
 				load_text_from_file(srcdata,
 						    srcdata->text_file);
-			cache_glyphs(srcdata, srcdata->text);
+			update_text_to_render(srcdata);
+			cache_glyphs(srcdata, srcdata->text_to_render);
 			set_up_vertex_buffer(srcdata);
 			srcdata->update_file = false;
 		}
@@ -491,9 +488,13 @@ skip_font_load:
 
 			bfree(srcdata->text);
 			srcdata->text = NULL;
+			bfree(srcdata->text_to_render);
+			srcdata->text_to_render = NULL;
 
 			os_utf8_to_wcs_ptr(emptystr, strlen(emptystr),
 					   &srcdata->text);
+			os_utf8_to_wcs_ptr(emptystr, strlen(emptystr),
+					   &srcdata->text_to_render);
 			blog(LOG_WARNING,
 			     "FT2-text: Failed to open %s for "
 			     "reading",
@@ -521,13 +522,15 @@ skip_font_load:
 		if (srcdata->text != NULL) {
 			bfree(srcdata->text);
 			srcdata->text = NULL;
+			bfree(srcdata->text_to_render);
+			srcdata->text_to_render = NULL;
 		}
 
 		os_utf8_to_wcs_ptr(tmp, strlen(tmp), &srcdata->text);
 	}
-
+	update_text_to_render(srcdata);
 	if (srcdata->font_face) {
-		cache_glyphs(srcdata, srcdata->text);
+		cache_glyphs(srcdata, srcdata->text_to_render);
 		set_up_vertex_buffer(srcdata);
 	}
 

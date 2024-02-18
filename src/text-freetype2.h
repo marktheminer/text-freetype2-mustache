@@ -17,8 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#ifdef __cplusplus
+#define MODULE_EXPORT extern "C" EXPORT
+#define MODULE_EXTERN extern "C"
+#else
+#define MODULE_EXPORT EXPORT
+#define MODULE_EXTERN extern
+#endif
+
 #include <obs-module.h>
 #include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define num_cache_slots 65535
 #define src_glyph srcdata->cacheglyphs[glyph_index]
@@ -40,6 +49,7 @@ struct ft2_source {
 	bool antialiasing;
 	char *text_file;
 	wchar_t *text;
+	wchar_t *text_to_render;
 	time_t m_timestamp;
 	bool update_file;
 	uint64_t last_checked;
@@ -99,7 +109,11 @@ void load_text_from_file(struct ft2_source *srcdata, const char *filename);
 void read_from_end(struct ft2_source *srcdata, const char *filename);
 
 void cache_standard_glyphs(struct ft2_source *srcdata);
-void cache_glyphs(struct ft2_source *srcdata, wchar_t *cache_glyphs);
+MODULE_EXPORT void cache_glyphs(struct ft2_source *srcdata,
+				wchar_t *cache_glyphs);
 
-void set_up_vertex_buffer(struct ft2_source *srcdata);
+MODULE_EXPORT void set_up_vertex_buffer(struct ft2_source *srcdata);
 void fill_vertex_buffer(struct ft2_source *srcdata);
+
+bool InitOBSTextFreetype2();
+void FreeOBSTextFreetype2();

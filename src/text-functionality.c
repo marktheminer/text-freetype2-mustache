@@ -35,7 +35,7 @@ void draw_outlines(struct ft2_source *srcdata)
 
 	struct gs_vb_data *vdata = gs_vertexbuffer_get_data(srcdata->vbuf);
 
-	if (!srcdata->text)
+	if (!srcdata->text_to_render)
 		return;
 
 	tmp = vdata->colors;
@@ -47,7 +47,7 @@ void draw_outlines(struct ft2_source *srcdata)
 				      0.0f);
 		draw_uv_vbuffer(srcdata->vbuf, srcdata->tex,
 				srcdata->draw_effect,
-				(uint32_t)wcslen(srcdata->text) * 6);
+				(uint32_t)wcslen(srcdata->text_to_render) * 6);
 	}
 	gs_matrix_identity();
 	gs_matrix_pop();
@@ -62,7 +62,7 @@ void draw_drop_shadow(struct ft2_source *srcdata)
 
 	struct gs_vb_data *vdata = gs_vertexbuffer_get_data(srcdata->vbuf);
 
-	if (!srcdata->text)
+	if (!srcdata->text_to_render)
 		return;
 
 	tmp = vdata->colors;
@@ -71,7 +71,7 @@ void draw_drop_shadow(struct ft2_source *srcdata)
 	gs_matrix_push();
 	gs_matrix_translate3f(4.0f, 4.0f, 0.0f);
 	draw_uv_vbuffer(srcdata->vbuf, srcdata->tex, srcdata->draw_effect,
-			(uint32_t)wcslen(srcdata->text) * 6);
+			(uint32_t)wcslen(srcdata->text_to_render) * 6);
 	gs_matrix_identity();
 	gs_matrix_pop();
 
@@ -84,13 +84,14 @@ void set_up_vertex_buffer(struct ft2_source *srcdata)
 	uint32_t x = 0, space_pos = 0, word_width = 0;
 	size_t len;
 
-	if (!srcdata->text)
+	if (!srcdata->text_to_render)
 		return;
 
 	if (srcdata->custom_width >= 100)
 		srcdata->cx = srcdata->custom_width;
 	else
-		srcdata->cx = get_ft2_text_width(srcdata->text, srcdata);
+		srcdata->cx =
+			get_ft2_text_width(srcdata->text_to_render, srcdata);
 	srcdata->cy = srcdata->max_h;
 
 	obs_enter_graphics();
@@ -100,46 +101,47 @@ void set_up_vertex_buffer(struct ft2_source *srcdata)
 		gs_vertexbuffer_destroy(tmpvbuf);
 	}
 
-	if (*srcdata->text == 0) {
+	if (*srcdata->text_to_render == 0) {
 		obs_leave_graphics();
 		return;
 	}
 
-	srcdata->vbuf =
-		create_uv_vbuffer((uint32_t)wcslen(srcdata->text) * 6, true);
+	srcdata->vbuf = create_uv_vbuffer(
+		(uint32_t)wcslen(srcdata->text_to_render) * 6, true);
 
 	if (srcdata->custom_width <= 100)
 		goto skip_word_wrap;
 	if (!srcdata->word_wrap)
 		goto skip_word_wrap;
 
-	len = wcslen(srcdata->text);
+	len = wcslen(srcdata->text_to_render);
 
 	for (uint32_t i = 0; i <= len; i++) {
-		if (i == wcslen(srcdata->text))
+		if (i == wcslen(srcdata->text_to_render))
 			goto eos_check;
 
-		if (srcdata->text[i] != L' ' && srcdata->text[i] != L'\n')
+		if (srcdata->text_to_render[i] != L' ' &&
+		    srcdata->text_to_render[i] != L'\n')
 			goto next_char;
 
 	eos_check:;
 		if (x + word_width > srcdata->custom_width) {
 			if (space_pos != 0)
-				srcdata->text[space_pos] = L'\n';
+				srcdata->text_to_render[space_pos] = L'\n';
 			x = 0;
 		}
-		if (i == wcslen(srcdata->text))
+		if (i == wcslen(srcdata->text_to_render))
 			goto eos_skip;
 
 		x += word_width;
 		word_width = 0;
-		if (srcdata->text[i] == L'\n')
+		if (srcdata->text_to_render[i] == L'\n')
 			x = 0;
-		if (srcdata->text[i] == L' ')
+		if (srcdata->text_to_render[i] == L' ')
 			space_pos = i;
 	next_char:;
-		glyph_index =
-			FT_Get_Char_Index(srcdata->font_face, srcdata->text[i]);
+		glyph_index = FT_Get_Char_Index(srcdata->font_face,
+						srcdata->text_to_render[i]);
 		if (src_glyph)
 			word_width += src_glyph->xadv;
 	eos_skip:;
@@ -153,7 +155,7 @@ skip_word_wrap:;
 void fill_vertex_buffer(struct ft2_source *srcdata)
 {
 	struct gs_vb_data *vdata = gs_vertexbuffer_get_data(srcdata->vbuf);
-	if (vdata == NULL || !srcdata->text)
+	if (vdata == NULL || !srcdata->text_to_render)
 		return;
 
 	struct vec2 *tvarray = (struct vec2 *)vdata->tvarray[0].array;
@@ -164,7 +166,7 @@ void fill_vertex_buffer(struct ft2_source *srcdata)
 	uint32_t dx = 0, dy = srcdata->max_h, max_y = dy;
 	uint32_t cur_glyph = 0;
 	uint32_t offset = 0;
-	size_t len = wcslen(srcdata->text);
+	size_t len = wcslen(srcdata->text_to_render);
 
 	if (srcdata->outline_text) {
 		offset = 2;
@@ -176,29 +178,29 @@ void fill_vertex_buffer(struct ft2_source *srcdata)
 		srcdata->colorbuf = NULL;
 	}
 	srcdata->colorbuf =
-		bzalloc(sizeof(uint32_t) * wcslen(srcdata->text) * 6);
+		bzalloc(sizeof(uint32_t) * wcslen(srcdata->text_to_render) * 6);
 	for (size_t i = 0; i < len * 6; i++) {
 		srcdata->colorbuf[i] = 0xFF000000;
 	}
 
 	for (size_t i = 0; i < len; i++) {
 	add_linebreak:;
-		if (srcdata->text[i] != L'\n')
+		if (srcdata->text_to_render[i] != L'\n')
 			goto draw_glyph;
 		dx = offset;
 		i++;
 		dy += srcdata->max_h + 4;
-		if (i == wcslen(srcdata->text))
+		if (i == wcslen(srcdata->text_to_render))
 			goto skip_glyph;
-		if (srcdata->text[i] == L'\n')
+		if (srcdata->text_to_render[i] == L'\n')
 			goto add_linebreak;
 	draw_glyph:;
 		// Skip filthy dual byte Windows line breaks
-		if (srcdata->text[i] == L'\r')
+		if (srcdata->text_to_render[i] == L'\r')
 			goto skip_glyph;
 
-		glyph_index =
-			FT_Get_Char_Index(srcdata->font_face, srcdata->text[i]);
+		glyph_index = FT_Get_Char_Index(srcdata->font_face,
+						srcdata->text_to_render[i]);
 		if (src_glyph == NULL)
 			goto skip_glyph;
 
