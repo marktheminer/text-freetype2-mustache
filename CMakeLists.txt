@@ -91,26 +91,30 @@ target_sources(
   PRIVATE src/plugin-main.c
           $<$<PLATFORM_ID:Darwin>:src/find-font-cocoa.m>
           $<$<PLATFORM_ID:Darwin>:src/find-font-iconv.c>
-          # $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:src/find-font-unix.c>
+          $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:src/find-font-unix.c>
           $<$<PLATFORM_ID:Windows,Darwin>:src/find-font.c>
           $<$<PLATFORM_ID:Windows>:src/find-font-windows.c>
-          # "src/find-font.h"
           "src/obs-convenience.c"
-          # "src/obs-convenience.h"
           "src/text-freetype2.c"
           "src/update-text.cpp"
-          # "src/text-freetype2.h"
           "src/text-functionality.c"
           "src/datetime.cpp"
-          # "src/datetime.h"
           "src/obs-text-mustache-definitions.cpp"
           "src/text.cpp"
-          # "src/text.h"
           "src/variables.cpp")
 
 option(ENABLE_FREETYPE "Enable FreeType text plugin" ON)
 
 find_package(Freetype REQUIRED)
+
+if(OS_MACOS)
+  find_package(Iconv REQUIRED)
+elseif(
+        OS_LINUX
+        OR OS_FREEBSD
+        OR OS_OPENBSD)
+  find_package(Fontconfig REQUIRED)
+endif()
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-main.c)
 
