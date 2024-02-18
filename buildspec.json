@@ -43,6 +43,8 @@
   "website": "https://github.com/marktheminer/text-freetype2-mustache",
   "email": "mark.jones1112+nospam@gmail.com",
   "uuids": {
+    "macosPackage": "bc5861a4-ee7f-432f-994b-62c53bf42228",
+    "macosInstaller": "200877d1-caab-4f2b-b980-c418f88066c5",
     "windowsApp": "8f8f9f6d-9983-48f6-aedb-571d58938e9d"
   }
 }
