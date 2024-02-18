@@ -110,9 +110,9 @@ find_package(Freetype REQUIRED)
 if(OS_MACOS)
   find_package(Iconv REQUIRED)
 elseif(
-        OS_LINUX
-        OR OS_FREEBSD
-        OR OS_OPENBSD)
+  OS_LINUX
+  OR OS_FREEBSD
+  OR OS_OPENBSD)
   find_package(Fontconfig REQUIRED)
 endif()
 
