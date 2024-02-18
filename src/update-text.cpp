@@ -24,5 +24,4 @@ extern "C" void update_text_to_render(struct ft2_source *srcdata)
 		cache_glyphs(srcdata, srcdata->text_to_render);
 		set_up_vertex_buffer(srcdata);
 	}
-	//	obs_source_video_render(srcdata->src);
 }
