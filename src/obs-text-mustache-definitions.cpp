@@ -67,14 +67,12 @@ static bool findVariables(void *data, obs_source_t *source)
 
 static bool updateText(void *data, obs_source_t *source)
 {
-	blog(LOG_INFO, "updateText");
 	const char *id = obs_source_get_id(source);
 	if (!strcmp("text_ft2_source_mustache_v2", id) ||
 	    !strcmp("text_ft2_source_mustache", id)) {
 		ft2_source *mySource = reinterpret_cast<ft2_source *>(
 			obs_obj_get_data(source));
 		update_text_to_render(mySource);
-		//ft2_source_render(mySource, mySource->draw_effect);
 	}
 	return true;
 }
